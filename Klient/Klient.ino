@@ -11,7 +11,9 @@
 #define GREEN_PIN 7
 #define RED_PIN 6
 
+//Creates an instance of the RFID scanner 
 MFRC522 rfid(SDA_PIN, RST_PIN);
+//Creates communication between the arduinos
 SoftwareSerial ardvComm (RX_PIN, TX_PIN);
 char buffer[128];
 
@@ -19,6 +21,7 @@ void setup() {
   Serial.begin(9600);
   ardvComm.begin(9600);
   SPI.begin();
+  //Initializes the RFID scanner
   rfid.PCD_Init();
   pinMode(GREEN_PIN,OUTPUT);
   pinMode(RED_PIN,OUTPUT);
@@ -29,11 +32,12 @@ void loop() {
   if (rfid.PICC_IsNewCardPresent()) {
     //If i manage to read the tag
     if (rfid.PICC_ReadCardSerial()) {
+      //Prints the tag ID to serial for me to check
       Serial.println(rfid.uid.uidByte[0]);
       Serial.println(rfid.uid.uidByte[1]);
       Serial.println(rfid.uid.uidByte[2]);
       Serial.println(rfid.uid.uidByte[3]);
-      
+      //Prints the tag ID to the other arduino
       ardvComm.write(rfid.uid.uidByte[0]);
       ardvComm.write(rfid.uid.uidByte[1]);
       ardvComm.write(rfid.uid.uidByte[2]);
@@ -43,6 +47,7 @@ void loop() {
       rfid.PCD_StopCrypto1();
     } 
   } 
+  //If i get responce from the other arduino
   if(ardvComm.available()){
     int answer = ardvComm.read();
     if(answer == 1){
@@ -55,11 +60,5 @@ void loop() {
       digitalWrite(RED_PIN, LOW);
     }
     ardvComm.flush();
-  }
-}
-void vypisHex(byte *buffer, byte bufferSize) {
-  for (byte i = 0; i < bufferSize; i++) {
-    Serial.print(buffer[i] < 0x10 ? " 0" : " ");
-    Serial.print(buffer[i], HEX);
   }
 }
