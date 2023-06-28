@@ -7,7 +7,9 @@
 #define RX_PIN 5 //The blue cable
 #define TX_PIN 3 //The white cable
 
-Dictionary *dict = new Dictionary();
+Dictionary *minEntryTime = new Dictionary();
+Dictionary *maxEntryTime = new Dictionary();
+Dictionary *lastEntryTime = new Dictionary();
 
 RTC_DS1307 rtc;
 SoftwareSerial ardvComm (RX_PIN, TX_PIN);
@@ -20,8 +22,8 @@ void setup() {
   ardvComm.begin(9600);
   Serial.begin(9600);
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  //dict->insert("xd", "as");
-  //Serial.println(dict->search("xd"));
+  dict->insert("xd", "xd");
+  Serial.println(dict->search("xd"));
   strcpy(allowedIDs[0], "19 225 7 183");
 }
 
@@ -48,7 +50,7 @@ void loop() {
   }
   if(Serial.available()){
     String reqFromPC = Serial.readString();
-    
+
 
   }
 }
