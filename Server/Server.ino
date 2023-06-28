@@ -11,7 +11,7 @@
 
 /*
 EEPROM Memory structure
-Max 10 ID najednou
+Max 10 ID at a time
 [x] = ID[0]
 [x+1] = ID[1]
 [x+2] = ID[2]
@@ -24,8 +24,8 @@ Max 10 ID najednou
 [x+9] = lastMin
 ...
 
-[100] = Je 1 místo plné? 1:0
-[101] = Je 2 místo plné? 1:0
+[100] = Is place 1 full? 1:0
+[101] = Is place 2 full? 1:0
 ...
 */
 
@@ -107,9 +107,7 @@ void loop() {
       //If theres a free space in EEPROM
       if(avlID != -1){
         //Get the ID of wanted device and and set its max time as always
-        char ph;
         int d1,d2,d3,d4;
-        Serial.println(reqFromPC.c_str());
         sscanf(reqFromPC.c_str(),"A %i %i %i %i", &d1, &d2, &d3, &d4);
         EEPROM[avlID-100] = d1;
         EEPROM[avlID-99] = d2;
@@ -117,13 +115,15 @@ void loop() {
         EEPROM[avlID-97] = d4;
         EEPROM[avlID-94] = 23;
         EEPROM[avlID-93] = 59;
+        Serial.println("This ID has been added")
       }else{
         Serial.println("The maximum amount od IDs has already been registered.\nPlease remove one using the R commmand.");
       }
     }
     //If i get the REMOVE command from PC
     else if(reqFromPC[0] == 'R'){
-
+      int d1,d2,d3,d4;
+      sscanf(reqFromPC.c_str(),"A %i %i %i %i", &d1, &d2, &d3, &d4);
     }
     //If i get the TIME command from PC
     else if(reqFromPC[0] == 'T'){
