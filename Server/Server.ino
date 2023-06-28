@@ -27,9 +27,9 @@ void setup() {
   Serial.begin(9600);
   //Sets RTC time based on the PC time
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  //dict->insert("xd", "xd");
-  //Serial.println(dict->search("xd"));
-  strcpy(allowedIDs[0], "19 225 7 183");
+  minEntryTime->insert("3 36 233 14", "16:00");
+  maxEntryTime->insert("3 36 233 14", "18:00");
+  strcpy(allowedIDs[0], "3 36 233 14");
 }
 
 void loop() {
@@ -42,19 +42,43 @@ void loop() {
     ardvComm.flush();
     //Format ID form later work
     sprintf(buffer,"%u %u %u %u", p1, p2, p3, p4);
-    bool isIn = false;
+    bool isAllowed = false;
     Serial.println(buffer);
     //Chech if the ID is allowed
     for(int i = 0; i < sizeof(allowedIDs)/sizeof(allowedIDs[0]); i++){
-      if (strcmp(allowedIDs[i], buffer) == 0) isIn = true;
+      if (strcmp(allowedIDs[i], buffer) == 0) isAllowed = true;
     }
-    //Send if the ID is allowed or not to the other arduino
-    if(isIn){
-      ardvComm.write(1);
-      Serial.println("Ano");
+    //Checks if the user is allowed to enter
+    if(isAllowed){
+      //Now we need to check if the ID can enter at this time
+      //Creates a DateTime object and set to it the current time
+      DateTime now = rtc.now();
+      unsigned int maxHour;
+      unsigned int maxMin;
+      unsigned int minHour;
+      unsigned int minMin;
+      //Gets the minimal and maximal entry time of the specific ID and saves it into the specified vars
+      sscanf(minEntryTime->search(buffer).c_str(),"%u:%u",&minHour, &minMin);
+      sscanf(maxEntryTime->search(buffer).c_str(),"%u:%u",&maxHour, &maxMin);
+      //If the time is obviously in the limit
+      if(minHour < now.hour() && maxHour > now.hour()){
+        answYes();
+      }
+      //If the time is on the lower border but still in
+      else if(minHour == now.hour() && now.minute() >= minMin){
+        answYes();
+      }
+      //If the time is on the uppper border but still in
+      else if(maxHour == now.hour() && now.minute() < maxMin){
+        answYes();
+      }
+      //If the time isnt in the limit
+      else{
+        answNo();
+      }
+    //If the ID isnt on the allowed list
     }else{
-      Serial.println("Ne");
-      ardvComm.write(2);
+      answNo();
     }
   }
   //If there's a command from PC
@@ -63,4 +87,19 @@ void loop() {
 
 
   }
+}
+void loadFromEEPROM(){
+  
+}
+
+//Send the answer corresponding to NO to the other arduino
+void answNo(){
+  Serial.println("Ne");
+  ardvComm.write(2);
+}
+
+//Send the answer corresponding to YES to the other arduino
+void answYes(){
+  Serial.println("Ano");
+  ardvComm.write(1);
 }
