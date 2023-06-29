@@ -21,7 +21,10 @@
 #define LASTHOUR_OFFSET 8
 #define LASTMIN_OFFSET 9
 
-//All user responces form easier editing
+/*
+I declared all the strings that will be displayed to the user here,
+so that they can be edited easier.
+*/
 #define ALREADY_REGISTERED "This ID has already been registered"
 #define ID_ADDED "This ID has been added"
 #define MAX_IDS "The maximum amount od IDs has already been registered."
@@ -32,6 +35,7 @@
 #define UNKNOWN_COMMAND "Unknown command"
 #define ENTRY_DENIED "Your entry has been denied"
 #define ENTRY_ALLOWED "Your entry has been allowed"
+#define TIME_SET "The time has been set"
 
 /*
 EEPROM structure
@@ -134,12 +138,15 @@ void loop() {
         int d1, d2, d3, d4;
         sscanf(reqFromPC.c_str(), "A %i %i %i %i", &d1, &d2, &d3, &d4);
         bool existsID = false;
+        //Checks if the device has already been registered
         for (int i = 0; i < 100; i += 10) {
           if (EEPROM[i] == d1 && EEPROM[i + ID1_OFFSET] == d2 && EEPROM[i + ID2_OFFSET] == d3 && EEPROM[i + ID3_OFFSET] == d4) existsID = true;
         }
+        //If the ID's already been registered
         if (existsID) {
           Serial.println(ALREADY_REGISTERED);
         } else {
+          //Saves the info about the device to EEPROM
           EEPROM[avlID] = d1;
           EEPROM[avlID + ID1_OFFSET] = d2;
           EEPROM[avlID + ID2_OFFSET] = d3;
@@ -149,6 +156,7 @@ void loop() {
           EEPROM[orgID] = 1;
           Serial.println(ID_ADDED);
         }
+        //If the max number of IDs has already been registered
       } else {
         Serial.println(MAX_IDS);
       }
@@ -166,7 +174,15 @@ void loop() {
     }
     //If i get the TIME command from PC
     else if (reqFromPC[0] == 'T') {
-
+      int d1, d2, d3, d4, minHour, minMin, maxHour, maxMin;
+      sscanf(reqFromPC.c_str(), "T %i %i %i %i %i:%i %i:%i", &d1, &d2, &d3, &d4, &minHour, &minMin, &maxHour, &maxMin);
+      sprintf(buffer, "T %i %i %i %i", d1, d2, d3, d4);
+      int IDpos = findPosOfID(String(buffer));
+      EEPROM[IDpos + MINHOUR_OFFSET] = minHour;
+      EEPROM[IDpos + MINMIN_OFFSET] = minMin;
+      EEPROM[IDpos + MAXHOUR_OFFSET] = maxHour;
+      EEPROM[IDpos + MAXMIN_OFFSET] = maxMin;
+      Serial.println(TIME_SET);
     }
     //If i get the SHOW command from PC
     else if (reqFromPC[0] == 'S') {
@@ -208,24 +224,36 @@ void loop() {
   }
 }
 
-//Send the answer corresponding to NO to the other arduino
+/*
+  This sends the Client that the tag isnt allowed to enter
+*/
 void answNo() {
   Serial.println(ENTRY_DENIED);
   ardvComm.write(2);
 }
 
-//Send the answer corresponding to YES to the other arduino and logs the last time of entry
+/*
+  This takes in the index in EEPROM of the tag and the current time.
+  It logs the time rn as the last time this tag entered and tells the Client the confirmation of entry of this tag.
+*/
 void answYes(int memIdEEPROM, DateTime now) {
   EEPROM[memIdEEPROM + LASTHOUR_OFFSET] = now.hour();
   EEPROM[memIdEEPROM + LASTMIN_OFFSET] = now.minute();
   Serial.println(ENTRY_ALLOWED);
   ardvComm.write(1);
 }
+/*
+  This clears the entire (that this program uses) EEPROM (sets it to 0s)
+*/
 void clearEEPROM() {
   for (int i = 0; i < 111; i++) {
     EEPROM[i] = 0;
   }
 }
+
+/*
+  This takes in a String that includes the ID of a tag and returns the index to of said tag in the EEPROM
+*/
 int findPosOfID(String reqFromPC) {
   int d1, d2, d3, d4;
   char ph;
@@ -236,6 +264,10 @@ int findPosOfID(String reqFromPC) {
   }
   return IDpos;
 }
+
+/*
+  This takes in a start index of a section of EEPROM and clears the entire section (sets all of it to 0s)
+*/
 void clearSection(int startIndex) {
   EEPROM[startIndex + 100] = 0;
   for (int i = startIndex; i < startIndex + 9; i++) {
