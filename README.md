@@ -12,7 +12,7 @@ Commands must be input with the "no new line" opion selected in the serial monit
 	- This command adds a device with the specified ID to the list of allowed devices
 	- Carefull: This sets the device's entry time as allways
 	- Example: S 205 206 207 208
- 2. R {ID in decimal}
+ 2. D {ID in decimal}
 	- This command removes the device with the specified ID from the list of allowed devices
 	- This also clears all the setup time intervals asociated with ID (including last entry time)
 	- Example: R 205 206 207 208
@@ -21,3 +21,5 @@ Commands must be input with the "no new line" opion selected in the serial monit
 	- Example: T 205 206 207 208 16:00 18:00
  4. S
 	- This command lists out all the currently allowed IDs together with their allowed times and last entry time
+ 5. R
+	- Resets the entire EEPROM
