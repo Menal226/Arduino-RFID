@@ -6,15 +6,15 @@
 
 #define SDA_PIN 10
 #define RST_PIN 9
-#define RX_PIN 5 //The blue cable
-#define TX_PIN 3 //The white cable
+#define RX_PIN 5  //The blue cable
+#define TX_PIN 3  //The white cable
 #define GREEN_PIN 7
 #define RED_PIN 6
 
-//Creates an instance of the RFID scanner 
+//Creates an instance of the RFID scanner
 MFRC522 rfid(SDA_PIN, RST_PIN);
 //Creates communication between the arduinos
-SoftwareSerial ardvComm (RX_PIN, TX_PIN);
+SoftwareSerial ardvComm(RX_PIN, TX_PIN);
 char buffer[128];
 
 void setup() {
@@ -23,8 +23,8 @@ void setup() {
   SPI.begin();
   //Initializes the RFID scanner
   rfid.PCD_Init();
-  pinMode(GREEN_PIN,OUTPUT);
-  pinMode(RED_PIN,OUTPUT);
+  pinMode(GREEN_PIN, OUTPUT);
+  pinMode(RED_PIN, OUTPUT);
 }
 
 void loop() {
@@ -45,17 +45,17 @@ void loop() {
       //End comm with the tag in order to prevent multiple readings of the same tag
       rfid.PICC_HaltA();
       rfid.PCD_StopCrypto1();
-    } 
-  } 
+    }
+  }
   //If i get responce from the other arduino
-  if(ardvComm.available()){
+  if (ardvComm.available()) {
     int answer = ardvComm.read();
-    if(answer == 1){
-      digitalWrite(GREEN_PIN,HIGH);
+    if (answer == 1) {
+      digitalWrite(GREEN_PIN, HIGH);
       delay(1000);
       digitalWrite(GREEN_PIN, LOW);
-    }else {
-      digitalWrite(RED_PIN,HIGH);
+    } else {
+      digitalWrite(RED_PIN, HIGH);
       delay(1000);
       digitalWrite(RED_PIN, LOW);
     }
