@@ -8,6 +8,8 @@
 
 #define RX_PIN 5  //The blue cable
 #define TX_PIN 3  //The white cable
+
+//Sets the offsets for my EEPROM indexing
 #define ID0_OFFSET 0
 #define ID1_OFFSET 1
 #define ID2_OFFSET 2
@@ -19,8 +21,20 @@
 #define LASTHOUR_OFFSET 8
 #define LASTMIN_OFFSET 9
 
+//All user responces form easier editing
+#define ALREADY_REGISTERED "This ID has already been registered"
+#define ID_ADDED "This ID has been added"
+#define MAX_IDS "The maximum amount od IDs has already been registered."
+#define ID_DELETED "The ID has been deleted"
+#define ID_NOT_FOUND "The specified ID has not been found"
+#define ID_LIST_EMPTY "The allowed IDs list is empty"
+#define EEPROM_RESET "The EEPROM has been reset"
+#define UNKNOWN_COMMAND "Unknown command"
+#define ENTRY_DENIED "Your entry has been denied"
+#define ENTRY_ALLOWED "Your entry has been allowed"
+
 /*
-EEPROM Memory structure
+EEPROM structure
 Max 10 ID at a time
 [x] = ID[0]
 [x+1] = ID[1]
@@ -52,10 +66,6 @@ void setup() {
   Serial.begin(9600);
   //Sets RTC time based on the PC time
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-
-  //for(int i = 0; i<111; i++){
-  //  EEPROM[i] = 0;
-  //}
 }
 
 void loop() {
@@ -109,36 +119,50 @@ void loop() {
     if (reqFromPC[0] == 'A') {
       //Finds the 1st free space in EEPROM
       int avlID = -1;
-      for
-        for (int i = 100; i <= 110; i++) {
-          if (EEPROM[i] == 0) {
-            avlID = i;
-            break;
-          }
+      for (int i = 100; i <= 109; i++) {
+        if (EEPROM[i] == 0) {
+          avlID = i;
+          break;
         }
+      }
       //If theres a free space in EEPROM
       if (avlID != -1) {
         //Sets the ID place as full
-        EEPROM[avlID] = 1;
+        int orgID = avlID;
         avlID = (avlID - 100) * 10;
         //Get the ID of wanted device and and set its max time as always
         int d1, d2, d3, d4;
         sscanf(reqFromPC.c_str(), "A %i %i %i %i", &d1, &d2, &d3, &d4);
-        EEPROM[avlID] = d1;
-        EEPROM[avlID + ID1_OFFSET] = d2;
-        EEPROM[avlID + ID2_OFFSET] = d3;
-        EEPROM[avlID + ID3_OFFSET] = d4;
-        EEPROM[avlID + MAXHOUR_OFFSET] = 23;
-        EEPROM[avlID + MAXMIN_OFFSET] = 59;
-        Serial.println("This ID has been added");
+        bool existsID = false;
+        for (int i = 0; i < 100; i += 10) {
+          if (EEPROM[i] == d1 && EEPROM[i + ID1_OFFSET] == d2 && EEPROM[i + ID2_OFFSET] == d3 && EEPROM[i + ID3_OFFSET] == d4) existsID = true;
+        }
+        if (existsID) {
+          Serial.println(ALREADY_REGISTERED);
+        } else {
+          EEPROM[avlID] = d1;
+          EEPROM[avlID + ID1_OFFSET] = d2;
+          EEPROM[avlID + ID2_OFFSET] = d3;
+          EEPROM[avlID + ID3_OFFSET] = d4;
+          EEPROM[avlID + MAXHOUR_OFFSET] = 23;
+          EEPROM[avlID + MAXMIN_OFFSET] = 59;
+          EEPROM[orgID] = 1;
+          Serial.println(ID_ADDED);
+        }
       } else {
-        Serial.println("The maximum amount od IDs has already been registered.\nPlease remove one using the R commmand.");
+        Serial.println(MAX_IDS);
       }
     }
     //If i get the REMOVE command from PC
-    else if (reqFromPC[0] == 'R') {
-      int d1, d2, d3, d4;
-      sscanf(reqFromPC.c_str(), "R %i %i %i %i", &d1, &d2, &d3, &d4);
+    else if (reqFromPC[0] == 'D') {
+      int IDpos = findPosOfID(reqFromPC);
+      //If the ID is found set all its values to 0
+      if (IDpos != -1) {
+        clearSection(IDpos);
+        Serial.println(ID_DELETED);
+      } else {
+        Serial.println(ID_NOT_FOUND);
+      }
     }
     //If i get the TIME command from PC
     else if (reqFromPC[0] == 'T') {
@@ -169,19 +193,24 @@ void loop() {
         }
       }
       if (ph == 1) {
-        Serial.println("The allowed ID list is empty");
+        Serial.println(ID_LIST_EMPTY);
       }
+    }
+    //Id i get the reset command from PC
+    else if (reqFromPC[0] == 'R') {
+      clearEEPROM();
+      Serial.println(EEPROM_RESET);
     }
     //If I get unknow command from PC
     else {
-      Serial.println("Unknown command");
+      Serial.println(UNKNOWN_COMMAND);
     }
   }
 }
 
 //Send the answer corresponding to NO to the other arduino
 void answNo() {
-  Serial.println("Denied");
+  Serial.println(ENTRY_DENIED);
   ardvComm.write(2);
 }
 
@@ -189,6 +218,27 @@ void answNo() {
 void answYes(int memIdEEPROM, DateTime now) {
   EEPROM[memIdEEPROM + LASTHOUR_OFFSET] = now.hour();
   EEPROM[memIdEEPROM + LASTMIN_OFFSET] = now.minute();
-  Serial.println("Allowed");
+  Serial.println(ENTRY_ALLOWED);
   ardvComm.write(1);
+}
+void clearEEPROM() {
+  for (int i = 0; i < 111; i++) {
+    EEPROM[i] = 0;
+  }
+}
+int findPosOfID(String reqFromPC) {
+  int d1, d2, d3, d4;
+  char ph;
+  int IDpos = -1;
+  sscanf(reqFromPC.c_str(), "%c %i %i %i %i", &ph, &d1, &d2, &d3, &d4);
+  for (int i = 0; i < 100; i += 10) {
+    if (EEPROM[i] == d1 && EEPROM[i + ID1_OFFSET] == d2 && EEPROM[i + ID2_OFFSET] == d3 && EEPROM[i + ID3_OFFSET] == d4) IDpos = i;
+  }
+  return IDpos;
+}
+void clearSection(int startIndex) {
+  EEPROM[startIndex + 100] = 0;
+  for (int i = startIndex; i < startIndex + 9; i++) {
+    EEPROM[i] = 0;
+  }
 }
