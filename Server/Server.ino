@@ -1,8 +1,6 @@
 
 //COM4
 #include <EEPROM.h>
-#include <Dictionary.h>
-#include <DictionaryDeclarations.h>
 #include <RTClib.h>
 #include <SoftwareSerial.h>
 
