@@ -1,4 +1,3 @@
-
 //COM4
 #include <EEPROM.h>
 #include <Dictionary.h>
@@ -20,6 +19,10 @@
 #define MAXMIN_OFFSET 7
 #define LASTHOUR_OFFSET 8
 #define LASTMIN_OFFSET 9
+//Sets the maximum number of IDs that can be stored at once
+#define MAX_IDS_STORED 10
+//Sets the amount of diffrent atributes stored for each ID stored in memory (like: maxMin, maxHour, minHour, ...)
+#define MAX_INFO_EACH_ID 10
 
 /*
 I declared all the strings that will be displayed to the user here,
@@ -39,21 +42,22 @@ so that they can be edited easier.
 
 /*
 EEPROM structure
-Max 10 ID at a time
+Max MAX_IDS_STORED ID at a time
 [x] = ID[0]
-[x+1] = ID[1]
-[x+2] = ID[2]
-[x+3] = ID[3]
-[x+4] = minHour
-[x+5] = minMin
-[x+6] = maxHour
-[x+7] = maxMin
-[x+8] = lastHour
-[x+9] = lastMin
+[x + 1] = ID[1]
+[x + 2] = ID[2]
+[x + 3] = ID[3]
+[x + 4] = minHour
+[x + 5] = minMin
+[x + 6] = maxHour
+[x + 7] = maxMin
+[x + 8] = lastHour
+[x + 9] = lastMin
+[x + (MAX_INFO_EACH_ID - 1)] = ?
 ...
-
-[100] = Is place 1 full? 1:0
-[101] = Is place 2 full? 1:0
+[MAX_IDS_STORED * MAX_INFO_EACH_ID] = Is place 0 full? 1:0
+[MAX_IDS_STORED * MAX_INFO_EACH_ID + 1] = Is place 1 full? 1:0
+[MAX_IDS_STORED * MAX_INFO_EACH_ID + MAX_IDS_STORED - 1] = Is last place full? 1:0
 ...
 */
 
@@ -83,7 +87,7 @@ void loop() {
     ardvComm.flush();
     bool isAllowed = false;
     //Chech if the ID is allowed
-    for (int i = 0; i <= 90; i = i + 10) {
+    for (int i = 0; i < MAX_IDS_STORED * MAX_INFO_EACH_ID; i += MAX_INFO_EACH_ID) {
       if (EEPROM[i] == p1 && EEPROM[i + 1] == p2 && EEPROM[i + 2] == p3 && EEPROM[i + 3] == p4) {
         isAllowed = true;
         memIdEEPROM = i;
@@ -123,7 +127,7 @@ void loop() {
     if (reqFromPC[0] == 'A') {
       //Finds the 1st free space in EEPROM
       int avlID = -1;
-      for (int i = 100; i <= 109; i++) {
+      for (int i = MAX_IDS_STORED * MAX_INFO_EACH_ID; i < MAX_IDS_STORED * MAX_INFO_EACH_ID + MAX_IDS_STORED; i++) {
         if (EEPROM[i] == 0) {
           avlID = i;
           break;
@@ -133,13 +137,13 @@ void loop() {
       if (avlID != -1) {
         //Sets the ID place as full
         int orgID = avlID;
-        avlID = (avlID - 100) * 10;
+        avlID = (avlID - MAX_IDS_STORED * MAX_INFO_EACH_ID) * MAX_INFO_EACH_ID;
         //Get the ID of wanted device and and set its max time as always
         int d1, d2, d3, d4;
         sscanf(reqFromPC.c_str(), "A %i %i %i %i", &d1, &d2, &d3, &d4);
         bool existsID = false;
         //Checks if the device has already been registered
-        for (int i = 0; i < 100; i += 10) {
+        for (int i = 0; i < MAX_IDS_STORED * MAX_INFO_EACH_ID; i += MAX_INFO_EACH_ID) {
           if (EEPROM[i] == d1 && EEPROM[i + ID1_OFFSET] == d2 && EEPROM[i + ID2_OFFSET] == d3 && EEPROM[i + ID3_OFFSET] == d4) existsID = true;
         }
         //If the ID's already been registered
@@ -187,10 +191,10 @@ void loop() {
     //If i get the SHOW command from PC
     else if (reqFromPC[0] == 'S') {
       int ph = 1;
-      for (int i = 100; i < 111; i++) {
+      for (int i = MAX_IDS_STORED * MAX_INFO_EACH_ID; i <= MAX_IDS_STORED * MAX_INFO_EACH_ID + MAX_IDS_STORED; i++) {
         //If theres an entry to the eeprom on an address
         if (EEPROM[i] == 1) {
-          int nr = (i - 100) * 10;
+          int nr = (i - MAX_IDS_STORED * MAX_INFO_EACH_ID) * MAX_INFO_EACH_ID;
           //I hate this with a passion, but i cant think of a better way of fixing this RN so itll do
           //When I place it straight into the sprintf it just doesnt work. Im guessing that the answer is some pointer BS, but I cant be fucked
           int kys0 = EEPROM[nr];
@@ -246,7 +250,7 @@ void answYes(int memIdEEPROM, DateTime now) {
   This clears the entire (that this program uses) EEPROM (sets it to 0s)
 */
 void clearEEPROM() {
-  for (int i = 0; i < 111; i++) {
+  for (int i = 0; i <= MAX_IDS_STORED * MAX_INFO_EACH_ID + MAX_IDS_STORED; i++) {
     EEPROM[i] = 0;
   }
 }
@@ -259,7 +263,7 @@ int findPosOfID(String reqFromPC) {
   char ph;
   int IDpos = -1;
   sscanf(reqFromPC.c_str(), "%c %i %i %i %i", &ph, &d1, &d2, &d3, &d4);
-  for (int i = 0; i < 100; i += 10) {
+  for (int i = 0; i < MAX_IDS_STORED * MAX_INFO_EACH_ID; i += MAX_INFO_EACH_ID) {
     if (EEPROM[i] == d1 && EEPROM[i + ID1_OFFSET] == d2 && EEPROM[i + ID2_OFFSET] == d3 && EEPROM[i + ID3_OFFSET] == d4) IDpos = i;
   }
   return IDpos;
@@ -269,8 +273,8 @@ int findPosOfID(String reqFromPC) {
   This takes in a start index of a section of EEPROM and clears the entire section (sets all of it to 0s)
 */
 void clearSection(int startIndex) {
-  EEPROM[startIndex + 100] = 0;
-  for (int i = startIndex; i < startIndex + 9; i++) {
+  EEPROM[startIndex + MAX_IDS_STORED * MAX_INFO_EACH_ID] = 0;
+  for (int i = startIndex; i < startIndex + (MAX_INFO_EACH_ID - 1); i++) {
     EEPROM[i] = 0;
   }
 }
