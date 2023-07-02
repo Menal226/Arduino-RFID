@@ -1,6 +1,6 @@
 # Arduino-RFID
 
-This is a project I did to learn how to communicate between two arduino boards.
+This is a project I did to learn how to communicate between two arduino boards. RTClib.h, MFRC522.h and SPI.h need to be present for the program to run.
 
 When an RFID tag is placed near the scanner the client arduino sends it's ID to the server board using the pins 3 and 5. The server checks if the ID is allowed to enter in which case 1 is sent to the client board and green LED flashes. If the ID isn't allowed 2 is sent and red LED flashes. (Allowed to enter means that the ID is on the allowedlist and it is currently the within the aproved time interval. If the connection has been broken the blue light starts flashing.
 
